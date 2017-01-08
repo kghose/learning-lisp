@@ -36,11 +36,12 @@ to enable node finding (for decreasing value)
 ;; going to be the key for our hash table
 
 (defun push-bheap (bh payload)
-  (swim-up bh (insert-bheap bh payload)))
+  (swim-up (insert-bheap bh payload))
+  bh)
 
 (defun pop-bheap (bh)
   (let ((pv (bnode-payload (bheap-root bh))))
-    (sink-down bh (bheap-root (delete-last (swap-first-last bh))))
+    (sink-down (bheap-root (delete-last (swap-first-last bh))))
     pv))
 
 (defun decrease (bh key data)) ; not going to be implemented this round
@@ -50,7 +51,6 @@ to enable node finding (for decreasing value)
 (defun insert-bheap (bh payload)
   (let* ((parent (parent-of-next bh))
 	 (new-node (make-bnode :payload payload :parent parent)))
-    ; (unless (null parent) (format t "~A~%" (key parent)))
     (cond
 	   ((null parent) (setf (bheap-root bh) new-node))	; root node
 	   (t (if (null (bnode-lchild parent))
@@ -80,13 +80,11 @@ to enable node finding (for decreasing value)
   (if (= ch 0) (bnode-lchild nd) (bnode-rchild nd)))
 
 ;; Swim a node up the tree
-; bh - binary heap root. This is only because we return the binary heap
 ; nd - the node we are considering
-; returns bh
-(defun swim-up (bh nd)
+(defun swim-up (nd)
   (unless (null (bnode-parent nd)) ; already at top
     (when (> (key (bnode-parent nd)) (key nd))
-      (swim-up bh (rot-up nd)))))
+      (swim-up (rot-up nd)))))
 
 ;; swap payloads of node and parent
 ;; return parent
@@ -114,14 +112,13 @@ to enable node finding (for decreasing value)
   bh)
 
 ;; Sink a node down the tree
-; bh - binary heap root. This is only because we return the binary heap
 ; nd - the node we are considering
-; returns bh
-(defun sink-down (bh nd)
+; returns nil
+(defun sink-down (nd)
   (unless (leaf-node? nd)
     (let ((sm-ch (smaller-child nd)))
       (when (> (key nd) (key sm-ch))
-        (sink-down bh (rot-down nd sm-ch))))))
+        (sink-down (rot-down nd sm-ch))))))
 
 (defun leaf-node? (nd)
   (and (null (bnode-lchild nd)) (null (bnode-rchild nd))))
