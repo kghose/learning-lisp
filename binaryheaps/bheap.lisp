@@ -40,7 +40,7 @@ to enable node finding (for decreasing value)
 
 (defun pop-bheap (bh)
   (let ((pv (bnode-payload (bheap-root bh))))
-    (sink-down bh (delete-bheap bh))
+    (sink-down bh (bheap-root (delete-last (swap-first-last bh))))
     pv))
 
 (defun decrease (bh key data)) ; not going to be implemented this round
@@ -50,16 +50,17 @@ to enable node finding (for decreasing value)
 (defun insert-bheap (bh payload)
   (let* ((parent (parent-of-next bh))
 	 (new-node (make-bnode :payload payload :parent parent)))
+    ; (unless (null parent) (format t "~A~%" (key parent)))
     (cond
 	   ((null parent) (setf (bheap-root bh) new-node))	; root node
 	   (t (if (null (bnode-lchild parent))
 		  (setf (bnode-lchild parent) new-node)
 		  (setf (bnode-rchild parent) new-node))))
-    (incf (bheap-node-count))
+    (incf (bheap-node-count bh))
     new-node))
 
 (defun parent-of-next (bh)
-  (find-parent (bheap-root bh) (+ 1 (bheap-node-count bh))))
+  (find-node (bheap-root bh) (floor (+ 1 (bheap-node-count bh)) 2)))
 
 
 ;; Use the binary representation trick to thread through the
@@ -68,15 +69,15 @@ to enable node finding (for decreasing value)
 ;; No bounds checking
 ; root - the root of the tree
 ; index - the index number of the node (1 = root)
-(defun find-parent (root index)
+(defun find-node (root index)
   (multiple-value-bind
 	(n-idx rem) (floor index 2)
-    (if (< n-idx 2)
+    (if (= n-idx 0)
 	root
-	(get-child (find-parent root n-idx) rem t))))
+	(get-child (find-node root n-idx) rem))))
 
 (defun get-child (nd ch)
-  (if (= ch 0) (node-lchild nd) (node-rchild nd)))
+  (if (= ch 0) (bnode-lchild nd) (bnode-rchild nd)))
 
 ;; Swim a node up the tree
 ; bh - binary heap root. This is only because we return the binary heap
@@ -91,24 +92,26 @@ to enable node finding (for decreasing value)
 ;; return parent
 (defun rot-up (nd)
   (rotatef (bnode-payload nd) (bnode-payload (bnode-parent nd)))
-  (node-parent nd))
+  (bnode-parent nd))
 
+; returns bh
+(defun swap-first-last (bh)
+  (rotatef (bnode-payload (bheap-root bh)) (bnode-payload (last-node bh)))
+  bh)
 
-;; swap the root and last nodes and delete the last
-;; return the root
-(defun delete-bheap (bh)
-  (let ((parent (parent-of-last bh)))
+(defun last-node (bh)
+  (find-node (bheap-root bh) (bheap-node-count bh)))
+
+(defun delete-last (bh)
+  (let* ((ln (last-node bh))
+	 (pn (bnode-parent ln)))
     (cond
-      ((null parent) (setf (bnode-payload (bheap-root bh)) nil))	; root node
-      (t (if (null (bnode-rchild parent))
-	     (setf (bnode-lchild parent) nil)
-	     (setf (bnode-rchild parent) nil)))))
-  (decf (bheap-node-count))
-  (bheap-root bh))
-
-
-(defun parent-of-last (bh)
-  (find-parent (bheap-root bh) (bheap-node-count bh)))
+      ((null pn) (setf (bnode-payload (bheap-root bh)) nil)) ; root node
+      ((if (null (bnode-rchild pn))
+	   (setf (bnode-lchild pn) nil)
+	   (setf (bnode-rchild pn) nil)))))
+  (decf (bheap-node-count bh))
+  bh)
 
 ;; Sink a node down the tree
 ; bh - binary heap root. This is only because we return the binary heap
@@ -121,7 +124,7 @@ to enable node finding (for decreasing value)
         (sink-down bh (rot-down nd sm-ch))))))
 
 (defun leaf-node? (nd)
-  (and (null (node-lchild nd)) (null (node-rchild nd))))
+  (and (null (bnode-lchild nd)) (null (bnode-rchild nd))))
 
 ; Return the node object that is the smaller of the two children
 ; Return nil if there are no children
@@ -129,9 +132,9 @@ to enable node finding (for decreasing value)
 (defun smaller-child (nd)
   (cond
     ((leaf-node? nd) nil)
-    ((null (key (node-rchild nd))) (node-lchild nd))  ; bheap, left child must exist
-    ((> (key (node-lchild nd)) (key (node-rchild nd))) (node-rchild nd))
-    (t (node-lchild nd))))
+    ((null (bnode-rchild nd)) (bnode-lchild nd))  ; bheap, left child must exist
+    ((> (key (bnode-lchild nd)) (key (bnode-rchild nd))) (bnode-rchild nd))
+    (t (bnode-lchild nd))))
 
 ;; swap parent and smaller child. Return smaller child
 (defun rot-down (nd sm-ch)

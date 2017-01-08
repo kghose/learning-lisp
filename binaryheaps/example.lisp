@@ -29,23 +29,23 @@
   (unless (= val -1)
     (progn
      (format t "~%Inserted ~d:~%" val)
-     (bheap-push bh val)
+     (push-bheap bh (make-payload :key val))
      (print-tree t (bheap-root bh))
      (push-tests bh (- val 1)))))
 
-(when nil
+(when t
   (format t "~%~%Push into bheap~%~%")
-  (let ((bh (make-bheap :root (make-node) :node-count 0)))
+  (let ((bh (make-bheap)))
     (push-tests bh 10)))
 
 (defun pop-tests (bh val)
   (unless (= val -1)
     (progn
-     (format t "~%Popped ~d:~%" (bheap-pop bh))
+     (format t "~%Popped ~d:~%" (pop-bheap bh))
      (print-tree t (bheap-root bh))
      (pop-tests bh (- val 1)))))
 
-(when nil
+(when t
   (format t "~%~%Pop from bheap~%~%")
   (let ((bh (create-test-tree 5)))
     (pop-tests bh 10)))
